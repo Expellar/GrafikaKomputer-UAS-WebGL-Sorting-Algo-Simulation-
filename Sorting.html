@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Sorting Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; display: flex; flex-direction: column; align-items: center; }
+        canvas { display: block; }
+        #controls { margin: 10px; }
+        #code-display { white-space: pre-wrap; background: #222; color: #0f0; padding: 10px; width: 50%; height: 100px; overflow: auto; }
+    </style>
+</head>
+<body>
+
+    <div id="controls">
+        <label for="algorithm">Choose Sorting Algorithm:</label>
+        <select id="algorithm">
+            <option value="bubble">Bubble Sort</option>
+            <option value="selection">Selection Sort</option>
+            <option value="insertion">Insertion Sort</option>
+        </select>
+        <button onclick="window.startSorting()">Start Sorting</button>
+    </div>
+
+    <div id="code-display">Select an algorithm and press start.</div>
+
+    <script type="module">
+        // Global Variables
+        window.scene = new THREE.Scene();
+        window.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        window.renderer = new THREE.WebGLRenderer();
+        window.bars = [];
+        window.barValues = [];
+        window.sortingInProgress = false;
+
+        // Renderer Setup
+        renderer.setSize(window.innerWidth, window.innerHeight - 100);
+        document.body.appendChild(renderer.domElement);
+
+        // Camera Position
+        camera.position.set(0, 10, 20);
+        camera.lookAt(0, 0, 0);
+
+        // Lighting
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 7);
+        scene.add(light);
+
+        // Create Bars
+        function generateBars() {
+            // Clear previous bars
+            bars.forEach(bar => scene.remove(bar));
+            bars = [];
+            barValues = [];
+
+            let numBars = 10;
+            for (let i = 0; i < numBars; i++) {
+                let height = Math.random() * 8 + 2;
+                barValues.push(height);
+
+                let geometry = new THREE.BoxGeometry(1, height, 1);
+                let material = new THREE.MeshStandardMaterial({ color: 0x1E90FF });
+                let bar = new THREE.Mesh(geometry, material);
+
+                bar.position.set(i - numBars / 2, height / 2, 0);
+                bars.push(bar);
+                scene.add(bar);
+            }
+        }
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+        generateBars();
+
+        // Swap Animation
+        async function animateSwap(bar1, bar2) {
+            return new Promise(resolve => {
+                let steps = 30;
+                let stepX = (bar2.position.x - bar1.position.x) / steps;
+                let count = 0;
+
+                function step() {
+                    if (count < steps) {
+                        bar1.position.x += stepX;
+                        bar2.position.x -= stepX;
+                        count++;
+                        requestAnimationFrame(step);
+                    } else {
+                        resolve();
+                    }
+                }
+                step();
+            });
+        }
+
+        // Sorting Algorithms
+        window.bubbleSort = async function() {
+            for (let i = 0; i < bars.length - 1; i++) {
+                for (let j = 0; j < bars.length - i - 1; j++) {
+                    if (barValues[j] > barValues[j + 1]) {
+                        [barValues[j], barValues[j + 1]] = [barValues[j + 1], barValues[j]];
+                        await animateSwap(bars[j], bars[j + 1]);
+                        [bars[j], bars[j + 1]] = [bars[j + 1], bars[j]];
+                    }
+                }
+                bars[bars.length - i - 1].material.color.set(0x00FF00);
+            }
+        };
+
+        window.selectionSort = async function() {
+            for (let i = 0; i < bars.length - 1; i++) {
+                let minIndex = i;
+                for (let j = i + 1; j < bars.length; j++) {
+                    if (barValues[j] < barValues[minIndex]) {
+                        minIndex = j;
+                    }
+                }
+                if (minIndex !== i) {
+                    [barValues[i], barValues[minIndex]] = [barValues[minIndex], barValues[i]];
+                    await animateSwap(bars[i], bars[minIndex]);
+                    [bars[i], bars[minIndex]] = [bars[minIndex], bars[i]];
+                }
+                bars[i].material.color.set(0x00FF00);
+            }
+        };
+
+        window.insertionSort = async function() {
+            for (let i = 1; i < bars.length; i++) {
+                let key = barValues[i];
+                let j = i - 1;
+                while (j >= 0 && barValues[j] > key) {
+                    barValues[j + 1] = barValues[j];
+                    await animateSwap(bars[j], bars[j + 1]);
+                    [bars[j], bars[j + 1]] = [bars[j + 1], bars[j]];
+                    j--;
+                }
+                barValues[j + 1] = key;
+                bars[i].material.color.set(0x00FF00);
+            }
+        };
+
+        // Start Sorting Function
+        window.startSorting = async function() {
+            if (window.sortingInProgress) return;
+            window.sortingInProgress = true;
+
+            document.getElementById("code-display").innerText = "Sorting in progress...";
+            bars.forEach(bar => bar.material.color.set(0x1E90FF));
+
+            let algorithm = document.getElementById("algorithm").value;
+            if (algorithm === "bubble") {
+                document.getElementById("code-display").innerText = "Bubble Sort Code:\nfor (i=0 to n-1)\n  for (j=0 to n-i-1)\n    if (arr[j] > arr[j+1]) swap()";
+                await bubbleSort();
+            } else if (algorithm === "selection") {
+                document.getElementById("code-display").innerText = "Selection Sort Code:\nfor (i=0 to n-1)\n  find minIndex\n  swap(i, minIndex)";
+                await selectionSort();
+            } else if (algorithm === "insertion") {
+                document.getElementById("code-display").innerText = "Insertion Sort Code:\nfor (i=1 to n)\n  while (arr[j] > key) swap()";
+                await insertionSort();
+            }
+
+            window.sortingInProgress = false;
+            document.getElementById("code-display").innerText = "Sorting completed!";
+        };
+
+    </script>
+
+</body>
+</html>
