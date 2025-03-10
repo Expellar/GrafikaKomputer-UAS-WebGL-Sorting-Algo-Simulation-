@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sorting Visualization (Simple)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    #bars {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      height: 300px;
+      border: 1px solid black;
+      margin: 20px;
+    }
+    .bar {
+      width: 30px;
+      margin: 2px;
+      background-color: steelblue;
+      display: inline-block;
+    }
+    button {
+      margin: 5px;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sorting Visualization (Simple)</h1>
+  <div id="bars"></div>
+  <button onclick="bubbleSort()">Bubble Sort</button>
+  <button onclick="shuffleBars()">Shuffle</button>
+
+  <script>
+    let values = [5, 2, 8, 3, 7, 6, 1, 4];
+
+    function createBars() {
+      const barsContainer = document.getElementById("bars");
+      barsContainer.innerHTML = "";
+      values.forEach(value => {
+        const bar = document.createElement("div");
+        bar.classList.add("bar");
+        bar.style.height = value * 30 + "px";
+        barsContainer.appendChild(bar);
+      });
+    }
+
+    function shuffleBars() {
+      values.sort(() => Math.random() - 0.5);
+      createBars();
+    }
+
+    async function bubbleSort() {
+      let bars = document.querySelectorAll(".bar");
+      let n = values.length;
+      for (let i = 0; i < n - 1; i++) {
+        for (let j = 0; j < n - i - 1; j++) {
+          bars[j].style.backgroundColor = "red";
+          bars[j + 1].style.backgroundColor = "red";
+          await sleep(500);
+          
+          if (values[j] > values[j + 1]) {
+            [values[j], values[j + 1]] = [values[j + 1], values[j]];
+            createBars();
+            bars = document.querySelectorAll(".bar");
+          }
+          
+          bars[j].style.backgroundColor = "steelblue";
+          bars[j + 1].style.backgroundColor = "steelblue";
+        }
+        bars[n - i - 1].style.backgroundColor = "green"; // Turn the correctly placed bar green
+      }
+      bars[0].style.backgroundColor = "green"; // Ensure the last element turns green
+
+      // Final check: Turn all bars green (in case of edge cases)
+      bars.forEach(bar => (bar.style.backgroundColor = "green"));
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    createBars();
+  </script>
+</body>
+</html>
