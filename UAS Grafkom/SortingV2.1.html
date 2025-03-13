@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Sorting Visualization</title>
+  <!-- Three.js & GSAP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #001d3d 0%, #000428 40%, #000000 100%);
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 15px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.1);
+      text-align: center;
+      animation: float 3s infinite ease-in-out alternate;
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      width: 300px;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      100% { transform: translateY(10px); }
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      color: #00eaff;
+      text-shadow: 0 0 20px #00eaff, 0 0 40px rgba(0, 234, 255, 0.5);
+      margin-bottom: 20px;
+    }
+
+    button, select {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      letter-spacing: 1px;
+      transition: 0.3s ease-in-out;
+      text-transform: uppercase;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sorting-btn {
+      background: linear-gradient(135deg, #0077ff, #00c6ff);
+      color: white;
+      box-shadow: 0 0 15px #00c6ff;
+    }
+
+    .sorting-btn:hover {
+      background: linear-gradient(135deg, #00c6ff, #0077ff);
+      box-shadow: 0 0 30px #00c6ff, 0 0 50px rgba(0, 198, 255, 0.5);
+      transform: scale(1.1);
+    }
+
+    #status {
+      font-weight: bold;
+      color: lime;
+      margin-top: 10px;
+    }
+
+    .dropdown {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: rgba(255, 255, 255, 0.1);
+      min-width: 160px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      z-index: 1;
+      border-radius: 10px;
+      backdrop-filter: blur(12px);
+    }
+
+    .dropdown-content button {
+      background: none;
+      color: white;
+      padding: 12px 16px;
+      text-align: left;
+      text-decoration: none;
+      display: block;
+      width: 100%;
+      border: none;
+      cursor: pointer;
+    }
+
+    .dropdown-content button:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="particles"></canvas>
+
+  <div class="dropdown">
+    <button class="sorting-btn">Menu</button>
+    <div class="dropdown-content">
+      <button id="bubbleSortBtn">Bubble Sort</button>
+      <button id="selectionSortBtn">Selection Sort</button>
+      <button id="insertionSortBtn">Insertion Sort</button>
+      <button id="mergeSortBtn">Merge Sort</button>
+      <button id="quickSortBtn">Quick Sort</button>
+      <button id="shuffleBtn">Shuffle</button>
+      <button id="changeViewBtn">Change View</button>
+      <button id="frontViewBtn">Front View</button>
+      <label for="speedSelect">Speed: </label>
+      <select id="speedSelect">
+        <option value="0.5">0.5x (Slower)</option>
+        <option value="1" selected>1x (Default)</option>
+        <option value="2">2x (Faster)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="container">
+    <h1>3D Sorting Visualization</h1>
+    <p id="status">Select an algorithm and press a sort button.</p>
+  </div>
+  
+  <script>
+    // Particle Background Animation
+    const canvas = document.getElementById("particles");
+    const ctx = canvas.getContext("2d");
+    let particlesArray = [];
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    class Particle {
+      constructor(x, y, directionX, directionY, size, color) {
+        this.x = x;
+        this.y = y;
+        this.directionX = directionX;
+        this.directionY = directionY;
+        this.size = size;
+        this.color = color;
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+      }
+
+      update() {
+        if (this.x + this.size > canvas.width || this.x - this.size < 0) {
+          this.directionX = -this.directionX;
+        }
+        if (this.y + this.size > canvas.height || this.y - this.size < 0) {
+          this.directionY = -this.directionY;
+        }
+        this.x += this.directionX;
+        this.y += this.directionY;
+        this.draw();
+      }
+    }
+
+    function initParticles() {
+      particlesArray = [];
+      let numberOfParticles = (canvas.height * canvas.width) / 36000; // Further reduced number of particles
+      for (let i = 0; i < numberOfParticles; i++) {
+        let size = (Math.random() * 5) + 1;
+        let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
+        let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
+        let directionX = (Math.random() * 5) - 2.5;
+        let directionY = (Math.random() * 5) - 2.5;
+        let color = '#00eaff';
+
+        particlesArray.push(new Particle(x, y, directionX, directionY, size, color));
+      }
+    }
+
+    function animateParticles() {
+      requestAnimationFrame(animateParticles);
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+
+      for (let i = 0; i < particlesArray.length; i++) {
+        particlesArray[i].update();
+      }
+    }
+
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      initParticles();
+    });
+
+    initParticles();
+    animateParticles();
+
+    // Global variabel dan konfigurasi
+    let scene, camera, renderer;
+    let bars = [];
+    const spacing = 1.5;
+    let sorting = false;
+    const defaultDelay = 500; // Delay default (ms)
+    
+    // Inisialisasi scene Three.js
+    function init() {
+      scene = new THREE.Scene();
+      
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+      
+      // Setup kamera
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+      camera.position.set(6, 10, 18);
+      camera.lookAt(0, 0, 0);
+      
+      // Pencahayaan
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+      directionalLight.position.set(10, 15, 10);
+      scene.add(directionalLight);
+      
+      const ambientLight = new THREE.AmbientLight(0x404040);
+      scene.add(ambientLight);
+      
+      // Grid helper untuk referensi tampilan
+      const gridHelper = new THREE.GridHelper(20, 20, 0xffffff, 0x555555);
+      scene.add(gridHelper);
+      
+      // Buat bars untuk visualisasi sorting
+      createBars();
+      
+      animate();
+      
+      window.addEventListener("resize", onWindowResize, false);
+    }
+    
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    // Fungsi untuk membuat bars (batang) berdasarkan nilai
+    function createBars() {
+      // Contoh nilai; Anda bisa menggantinya dengan nilai acak jika diinginkan
+      const values = [5, 2, 8, 3, 7, 6, 1, 4];
+      for (let i = 0; i < values.length; i++) {
+        const geometry = new THREE.BoxGeometry(1, values[i], 1);
+        const material = new THREE.MeshStandardMaterial({ color: 0x0077ff });
+        const bar = new THREE.Mesh(geometry, material);
+        // Tempatkan bar sehingga alas berada di sumbu-Y=0
+        bar.position.set(i * spacing - (values.length * spacing) / 2, values[i] / 2, 0);
+        scene.add(bar);
+        bars.push({ mesh: bar, value: values[i] });
+      }
+    }
+    
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    
+    // Fungsi utilitas
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    function getDelay() {
+      const multiplier = parseFloat(document.getElementById("speedSelect").value);
+      return defaultDelay / multiplier;
+    }
+    
+    function updateStatus(text) {
+      document.getElementById("status").innerText = text;
+    }
+    
+    // Fungsi swap dengan animasi untuk menukar dua bar
+    async function swapBars(indexA, indexB) {
+      const barA = bars[indexA];
+      const barB = bars[indexB];
+      const posA = barA.mesh.position.x;
+      const posB = barB.mesh.position.x;
+      
+      // Angkat kedua bar
+      await gsap.to([barA.mesh.position, barB.mesh.position], { y: "+=1", duration: 0.25, ease: "power2.out" });
+      // Tukar posisi horizontal dengan efek bounce
+      await gsap.to(barA.mesh.position, { x: posB, duration: 0.5, ease: "back.out(1.7)" });
+      await gsap.to(barB.mesh.position, { x: posA, duration: 0.5, ease: "back.out(1.7)" }, "<");
+      // Turunkan kembali kedua bar
+      await gsap.to([barA.mesh.position, barB.mesh.position], { y: "-=1", duration: 0.25, ease: "power2.in" });
+      
+      // Tukar posisi di array
+      [bars[indexA], bars[indexB]] = [bars[indexB], bars[indexA]];
+    }
+    
+    // --- Algoritma Sorting ---
+    
+    // Bubble Sort
+    async function bubbleSort() {
+      let n = bars.length;
+      for (let i = 0; i < n - 1; i++) {
+        for (let j = 0; j < n - i - 1; j++) {
+          updateStatus(`Bubble Sort: Membandingkan indeks ${j} dan ${j+1}`);
+          bars[j].mesh.material.color.set(0xff0000);
+          bars[j+1].mesh.material.color.set(0xff0000);
+          await sleep(getDelay());
+          if (bars[j].value > bars[j+1].value) {
+            await swapBars(j, j+1);
+            await sleep(getDelay());
+          }
+          bars[j].mesh.material.color.set(0x0077ff);
+          bars[j+1].mesh.material.color.set(0x0077ff);
+        }
+        bars[n - i - 1].mesh.material.color.set(0x00ff00);
+      }
+      bars[0].mesh.material.color.set(0x00ff00);
+      updateStatus("Bubble Sort Selesai");
+    }
+    
+    // Selection Sort
+    async function selectionSort() {
+      let n = bars.length;
+      for (let i = 0; i < n - 1; i++) {
+        updateStatus(`Selection Sort: Iterasi ${i+1}`);
+        let minIndex = i;
+        bars[minIndex].mesh.material.color.set(0xff0000);
+        await sleep(getDelay());
+        for (let j = i + 1; j < n; j++) {
+          updateStatus(`Selection Sort: Membandingkan indeks ${j}`);
+          bars[j].mesh.material.color.set(0xffff00);
+          await sleep(getDelay());
+          if (bars[j].value < bars[minIndex].value) {
+            bars[minIndex].mesh.material.color.set(0x0077ff);
+            minIndex = j;
+            bars[minIndex].mesh.material.color.set(0xff0000);
+          } else {
+            bars[j].mesh.material.color.set(0x0077ff);
+          }
+          await sleep(getDelay());
+        }
+        if (minIndex !== i) {
+          await swapBars(i, minIndex);
+          await sleep(getDelay());
+        }
+        bars[i].mesh.material.color.set(0x00ff00);
+      }
+      bars[n-1].mesh.material.color.set(0x00ff00);
+      updateStatus("Selection Sort Selesai");
+    }
+    
+    // Insertion Sort
+    async function insertionSort() {
+      let n = bars.length;
+      for (let i = 1; i < n; i++) {
+        updateStatus(`Insertion Sort: Menyisipkan elemen indeks ${i}`);
+        bars[i].mesh.material.color.set(0xffff00);
+        await sleep(getDelay());
+        let j = i;
+        while (j > 0 && bars[j-1].value > bars[j].value) {
+          updateStatus(`Insertion Sort: Menukar indeks ${j-1} dan ${j}`);
+          bars[j-1].mesh.material.color.set(0xff0000);
+          bars[j].mesh.material.color.set(0xff0000);
+          await sleep(getDelay());
+          await swapBars(j-1, j);
+          await sleep(getDelay());
+          bars[j-1].mesh.material.color.set(0x0077ff);
+          bars[j].mesh.material.color.set(0x0077ff);
+          j--;
+        }
+        bars[j].mesh.material.color.set(0x00ff00);
+      }
+      for(let i = 0; i < n; i++){
+        bars[i].mesh.material.color.set(0x00ff00);
+      }
+      updateStatus("Insertion Sort Selesai");
+    }
+    
+    // Merge Sort
+    async function mergeSort(low, high) {
+      if(low < high) {
+        let mid = Math.floor((low + high) / 2);
+        await mergeSort(low, mid);
+        await mergeSort(mid + 1, high);
+        await merge(low, mid, high);
+      }
+    }
+    
+    async function merge(low, mid, high) {
+      updateStatus(`Merge Sort: Menggabungkan indeks ${low} sampai ${high}`);
+      let merged = [];
+      let i = low, j = mid + 1;
+      while(i <= mid && j <= high) {
+        if(bars[i].value <= bars[j].value) {
+          merged.push(bars[i]);
+          i++;
+        } else {
+          merged.push(bars[j]);
+          j++;
+        }
+      }
+      while(i <= mid) {
+        merged.push(bars[i]);
+        i++;
+      }
+      while(j <= high) {
+        merged.push(bars[j]);
+        j++;
+      }
+      // Animasi perpindahan bar ke posisi baru
+      for(let k = 0; k < merged.length; k++){
+        let newIndex = low + k;
+        let targetX = newIndex * spacing - (bars.length * spacing) / 2;
+        await gsap.to(merged[k].mesh.position, { x: targetX, duration: 0.5, ease: "power2.inOut" });
+      }
+      for(let k = low; k <= high; k++){
+        bars[k] = merged[k - low];
+      }
+    }
+    
+    async function mergeSortAnimation() {
+      await mergeSort(0, bars.length - 1);
+      for (let i = 0; i < bars.length; i++) {
+        bars[i].mesh.material.color.set(0x00ff00);
+        await sleep(getDelay());
+      }
+      updateStatus("Merge Sort Selesai");
+    }
+    
+    // Quick Sort
+    async function quickSort(low, high) {
+      if(low < high) {
+        let pivotIndex = await partition(low, high);
+        await quickSort(low, pivotIndex - 1);
+        await quickSort(pivotIndex + 1, high);
+      }
+    }
+    
+    async function partition(low, high) {
+      updateStatus(`Quick Sort: Partitioning indeks ${low} sampai ${high}`);
+      let pivotValue = bars[high].value;
+      bars[high].mesh.material.color.set(0x0000ff); // Tandai pivot dengan biru
+      let i = low;
+      for(let j = low; j < high; j++) {
+        bars[j].mesh.material.color.set(0xff0000);
+        await sleep(getDelay());
+        if(bars[j].value < pivotValue) {
+          await swapBars(i, j);
+          await sleep(getDelay());
+          i++;
+        }
+        bars[j].mesh.material.color.set(0x0077ff);
+      }
+      await swapBars(i, high);
+      await sleep(getDelay());
+      bars[i].mesh.material.color.set(0x00ff00);
+      return i;
+    }
+    
+    async function quickSortAnimation() {
+      await quickSort(0, bars.length - 1);
+      for(let i = 0; i < bars.length; i++){
+        bars[i].mesh.material.color.set(0x00ff00);
+      }
+      updateStatus("Quick Sort Selesai");
+    }
+    
+    // Fungsi untuk mengacak urutan bar
+    function shuffleBars() {
+      // Fisher-Yates shuffle
+      for(let i = bars.length - 1; i > 0; i--){
+        let j = Math.floor(Math.random() * (i + 1));
+        [bars[i], bars[j]] = [bars[j], bars[i]];
+      }
+      // Animasi perpindahan bar ke posisi baru sesuai urutan baru
+      for(let i = 0; i < bars.length; i++){
+        let targetX = i * spacing - (bars.length * spacing) / 2;
+        gsap.to(bars[i].mesh.position, { x: targetX, duration: 0.5, ease: "power2.inOut" });
+        bars[i].mesh.material.color.set(0x0077ff);
+      }
+      updateStatus("Shuffled");
+    }
+    
+    // Fungsi untuk menonaktifkan tombol saat sorting berlangsung
+    function disableSortButtons() {
+      document.getElementById("bubbleSortBtn").disabled = true;
+      document.getElementById("selectionSortBtn").disabled = true;
+      document.getElementById("insertionSortBtn").disabled = true;
+      document.getElementById("mergeSortBtn").disabled = true;
+      document.getElementById("quickSortBtn").disabled = true;
+      document.getElementById("shuffleBtn").disabled = true;
+    }
+    
+    // Fungsi untuk mengaktifkan kembali tombol-tombol
+    function enableSortButtons() {
+      document.getElementById("bubbleSortBtn").disabled = false;
+      document.getElementById("selectionSortBtn").disabled = false;
+      document.getElementById("insertionSortBtn").disabled = false;
+      document.getElementById("mergeSortBtn").disabled = false;
+      document.getElementById("quickSortBtn").disabled = false;
+      document.getElementById("shuffleBtn").disabled = false;
+    }
+    
+    // Event listener untuk tombol-tombol
+    document.getElementById("bubbleSortBtn").addEventListener("click", async () => {
+      if(sorting) return;
+      sorting = true;
+      disableSortButtons();
+      await bubbleSort();
+      enableSortButtons();
+      sorting = false;
+    });
+    
+    document.getElementById("selectionSortBtn").addEventListener("click", async () => {
+      if(sorting) return;
+      sorting = true;
+      disableSortButtons();
+      await selectionSort();
+      enableSortButtons();
+      sorting = false;
+    });
+    
+    document.getElementById("insertionSortBtn").addEventListener("click", async () => {
+      if(sorting) return;
+      sorting = true;
+      disableSortButtons();
+      await insertionSort();
+      enableSortButtons();
+      sorting = false;
+    });
+    
+    document.getElementById("mergeSortBtn").addEventListener("click", async () => {
+      if(sorting) return;
+      sorting = true;
+      disableSortButtons();
+      await mergeSortAnimation();
+      enableSortButtons();
+      sorting = false;
+    });
+    
+    document.getElementById("quickSortBtn").addEventListener("click", async () => {
+      if(sorting) return;
+      sorting = true;
+      disableSortButtons();
+      await quickSortAnimation();
+      enableSortButtons();
+      sorting = false;
+    });
+    
+    document.getElementById("shuffleBtn").addEventListener("click", () => {
+      if(sorting) return;
+      shuffleBars();
+    });
+    
+    document.getElementById("changeViewBtn").addEventListener("click", () => {
+      gsap.to(camera.position, { x: 8, y: 12, z: 18, duration: 1 });
+    });
+
+    document.getElementById("frontViewBtn").addEventListener("click", () => {
+      gsap.to(camera.position, { x: 0, y: 10, z: 20, duration: 1 });
+    });
+    
+    // Mulai inisialisasi scene
+    init();
+  </script>
+</body>
+</html>

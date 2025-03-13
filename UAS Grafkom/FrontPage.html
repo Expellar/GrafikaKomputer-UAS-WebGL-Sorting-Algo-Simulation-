@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Algorithm Visualizer</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    /* Background with Moving Gradient */
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #001d3d 0%, #000428 40%, #000000 100%);
+    }
+
+    /* Particle Animation */
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+
+    /* Glassmorphism Container */
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 40px;
+      border-radius: 15px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.1);
+      text-align: center;
+      animation: float 3s infinite ease-in-out alternate;
+    }
+
+    /* Floating Animation */
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      100% { transform: translateY(10px); }
+    }
+
+    h1 {
+      font-size: 2.8rem;
+      color: #00eaff;
+      text-shadow: 0 0 20px #00eaff, 0 0 40px rgba(0, 234, 255, 0.5);
+      margin-bottom: 20px;
+    }
+
+    /* Buttons Styling */
+    button {
+      width: 250px;
+      padding: 15px;
+      margin: 15px;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      letter-spacing: 1px;
+      transition: 0.3s ease-in-out;
+      text-transform: uppercase;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Sorting Button */
+    .sorting-btn {
+      background: linear-gradient(135deg, #0077ff, #00c6ff);
+      color: white;
+      box-shadow: 0 0 15px #00c6ff;
+    }
+
+    .sorting-btn:hover {
+      background: linear-gradient(135deg, #00c6ff, #0077ff);
+      box-shadow: 0 0 30px #00c6ff, 0 0 50px rgba(0, 198, 255, 0.5);
+      transform: scale(1.1);
+    }
+
+    /* Pathfinding Button */
+    .pathfinding-btn {
+      background: linear-gradient(135deg, #ff7700, #ff4400);
+      color: white;
+      box-shadow: 0 0 15px #ff4400;
+    }
+
+    .pathfinding-btn:hover {
+      background: linear-gradient(135deg, #ff4400, #ff7700);
+      box-shadow: 0 0 30px #ff7700, 0 0 50px rgba(255, 119, 0, 0.5);
+      transform: scale(1.1);
+    }
+
+    /* Glowing Line Effect */
+    button::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.2);
+      transform: skewX(-20deg);
+      transition: 0.5s;
+    }
+
+    button:hover::before {
+      left: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="particles"></canvas>
+
+  <div class="container">
+    <h1>Welcome to Algorithm Visualizer</h1>
+    <button class="sorting-btn" onclick="location.href='SortingV2.1.html'">Go to Sorting Visualization</button>
+    <button class="pathfinding-btn" onclick="location.href='PathFindingVisual.html'">Go to Pathfinding Visualization</button>
+  </div>
+
+  <script>
+    // Particle Background Animation
+    const canvas = document.getElementById("particles");
+    const ctx = canvas.getContext("2d");
+    let particlesArray = [];
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 3 + 1;
+        this.speedX = Math.random() * 1.5 - 0.75;
+        this.speedY = Math.random() * 1.5 - 0.75;
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+        if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+      }
+      draw() {
+        ctx.fillStyle = "rgba(0, 234, 255, 0.7)";
+        ctx.shadowColor = "rgba(0, 234, 255, 0.5)";
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function initParticles() {
+      particlesArray = [];
+      for (let i = 0; i < 100; i++) {
+        particlesArray.push(new Particle());
+      }
+    }
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particlesArray.forEach(particle => {
+        particle.update();
+        particle.draw();
+      });
+      requestAnimationFrame(animateParticles);
+    }
+
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      initParticles();
+    });
+
+    initParticles();
+    animateParticles();
+  </script>
+
+</body>
+</html>
